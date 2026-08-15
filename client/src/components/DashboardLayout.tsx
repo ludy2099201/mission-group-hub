@@ -78,6 +78,11 @@ function LayoutContent({ children, setSidebarWidth }: { children: React.ReactNod
   const isCollapsed = state === "collapsed";
   const visibleItems = menuItems.filter(item => item.roles.includes(user?.role ?? "Member"));
   const active = visibleItems.find(item => item.path === location);
+  const isRestrictedRoute = menuItems.some(item => item.path === location) && !visibleItems.some(item => item.path === location);
+
+  useEffect(() => {
+    if (isRestrictedRoute) setLocation("/");
+  }, [isRestrictedRoute, setLocation]);
 
   useEffect(() => {
     const move = (event: MouseEvent) => {
@@ -129,7 +134,7 @@ function LayoutContent({ children, setSidebarWidth }: { children: React.ReactNod
       </div>
       <SidebarInset className="bg-[#f7f5f0]">
         {isMobile && <header className="sticky top-0 z-40 flex h-16 items-center justify-between border-b border-[#e8e2d8] bg-[#fdfcf9]/95 px-4 backdrop-blur"><div className="flex items-center gap-3"><button onClick={toggleSidebar} aria-label="開啟選單" className="rounded-xl p-2 text-[#355f4d] hover:bg-[#f3efe8]"><Menu className="h-5 w-5" /></button><div><p className="font-serif font-semibold text-[#29483c]">{active?.label ?? "恩典同行"}</p><p className="text-[10px] tracking-widest text-[#a06c3b]">CHURCH CARE</p></div></div><Bell className="h-5 w-5 text-[#7a847c]" /></header>}
-        <main className="min-h-screen p-4 sm:p-6 lg:p-9">{children}</main>
+        <main className="min-h-screen p-4 sm:p-6 lg:p-9">{isRestrictedRoute ? <div className="grid min-h-[65vh] place-items-center"><section className="max-w-md rounded-3xl border border-[#e2dace] bg-[#fdfcf9] p-8 text-center shadow-[0_18px_45px_rgba(57,75,62,0.08)]"><div className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-[#f6eee2] text-[#a06c3b]"><ShieldCheck className="h-6 w-6" /></div><h1 className="mt-5 font-serif text-2xl font-semibold text-[#405a49]">此功能需要更高權限</h1><p className="mt-3 text-sm leading-6 text-[#758077]">您的目前角色為 {user?.role}。系統已帶您回到儀表板，若需此功能請向 Admin 申請授權。</p><Button onClick={() => setLocation("/")} className="mt-6 rounded-xl bg-[#355f4d] hover:bg-[#294a3d]">返回儀表板</Button></section></div> : children}</main>
       </SidebarInset>
     </>
   );
