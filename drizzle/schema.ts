@@ -113,16 +113,43 @@ export const groups = mysqlTable("groups", {
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 }, (table) => [index("groups_leader_idx").on(table.leaderUserId)]);
 
+export const households = mysqlTable("households", {
+  id: int("id").autoincrement().primaryKey(),
+  name: varchar("name", { length: 120 }).notNull(),
+  primaryPhone: varchar("primaryPhone", { length: 64 }),
+  notes: text("notes"),
+  status: mysqlEnum("status", missionaryStatuses).default("active").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => [index("households_status_idx").on(table.status)]);
+
+export const people = mysqlTable("people", {
+  id: int("id").autoincrement().primaryKey(),
+  fullName: varchar("fullName", { length: 120 }).notNull(),
+  email: varchar("email", { length: 320 }),
+  phone: varchar("phone", { length: 64 }),
+  householdId: int("householdId").references(() => households.id),
+  status: mysqlEnum("status", missionaryStatuses).default("active").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => [
+  index("people_name_idx").on(table.fullName),
+  index("people_email_idx").on(table.email),
+  index("people_phone_idx").on(table.phone),
+  index("people_household_idx").on(table.householdId),
+]);
+
 export const groupMembers = mysqlTable("groupMembers", {
   id: int("id").autoincrement().primaryKey(),
   groupId: int("groupId").notNull().references(() => groups.id),
   name: varchar("name", { length: 120 }).notNull(),
   email: varchar("email", { length: 320 }),
   phone: varchar("phone", { length: 64 }),
+  personId: int("personId").references(() => people.id),
   joinedAt: timestamp("joinedAt").defaultNow().notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
-}, (table) => [index("groupMembers_group_idx").on(table.groupId)]);
+}, (table) => [index("groupMembers_group_idx").on(table.groupId), index("groupMembers_person_idx").on(table.personId)]);
 
 export const groupMeetings = mysqlTable("groupMeetings", {
   id: int("id").autoincrement().primaryKey(),

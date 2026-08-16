@@ -7,6 +7,7 @@ import { ThemeProvider } from "./contexts/ThemeContext";
 import ManagementPage, { type ManagementView } from "./pages/ManagementPage";
 import NotFound from "./pages/NotFound";
 import PastoralWorkCenter from "./pages/PastoralWorkCenter";
+import PeopleDirectory from "./pages/PeopleDirectory";
 
 function Screen({ view }: { view: ManagementView }) {
   return <DashboardLayout><ManagementPage view={view} /></DashboardLayout>;
@@ -14,6 +15,10 @@ function Screen({ view }: { view: ManagementView }) {
 
 function PastoralScreen() {
   return <DashboardLayout><PastoralWorkCenter /></DashboardLayout>;
+}
+
+function PeopleScreen() {
+  return <DashboardLayout><PeopleDirectory /></DashboardLayout>;
 }
 
 function App() {
@@ -27,6 +32,7 @@ function App() {
     <Route path="/permissions"><Screen view="permissions" /></Route>
     <Route path="/governance"><Screen view="governance" /></Route>
     <Route path="/pastoral-work"><PastoralScreen /></Route>
+    <Route path="/people"><PeopleScreen /></Route>
     <Route><NotFound /></Route>
   </Switch></TooltipProvider></ThemeProvider></ErrorBoundary>;
 }

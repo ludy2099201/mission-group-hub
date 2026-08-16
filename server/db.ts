@@ -14,9 +14,11 @@ import {
   InsertUser,
   missionaries,
   pastoralTasks,
+  people,
   prayerRequests,
   supporters,
   supportCommitments,
+  households,
   users,
 } from "../drizzle/schema";
 import { ENV } from "./_core/env";
@@ -241,6 +243,67 @@ export async function getGroupMemberById(id: number) {
   const db = await requireDb();
   const rows = await db.select().from(groupMembers).where(eq(groupMembers.id, id)).limit(1);
   return rows[0];
+}
+
+export async function updateGroupMemberPersonLink(id: number, personId: number | null) {
+  const db = await requireDb();
+  await db.update(groupMembers).set({ personId, updatedAt: new Date() }).where(eq(groupMembers.id, id));
+}
+
+export async function listHouseholds() {
+  const db = await requireDb();
+  return db.select().from(households).orderBy(asc(households.name));
+}
+
+export async function createHousehold(data: typeof households.$inferInsert) {
+  const db = await requireDb();
+  const result = await db.insert(households).values(data);
+  return Number(result[0].insertId);
+}
+
+export async function updateHousehold(id: number, data: Partial<typeof households.$inferInsert>) {
+  const db = await requireDb();
+  await db.update(households).set({ ...data, updatedAt: new Date() }).where(eq(households.id, id));
+}
+
+export async function listPeople() {
+  const db = await requireDb();
+  return db.select({
+    id: people.id, fullName: people.fullName, email: people.email, phone: people.phone, householdId: people.householdId, status: people.status,
+    householdName: households.name, createdAt: people.createdAt, updatedAt: people.updatedAt,
+  }).from(people).leftJoin(households, eq(people.householdId, households.id)).orderBy(asc(people.fullName));
+}
+
+export async function getPersonById(id: number) {
+  const db = await requireDb();
+  const rows = await db.select().from(people).where(eq(people.id, id)).limit(1);
+  return rows[0];
+}
+
+export async function createPerson(data: typeof people.$inferInsert) {
+  const db = await requireDb();
+  const result = await db.insert(people).values(data);
+  return Number(result[0].insertId);
+}
+
+export async function updatePerson(id: number, data: Partial<typeof people.$inferInsert>) {
+  const db = await requireDb();
+  await db.update(people).set({ ...data, updatedAt: new Date() }).where(eq(people.id, id));
+}
+
+export async function findPersonDuplicates(input: { fullName: string; email?: string | null; phone?: string | null; excludeId?: number }) {
+  const normalise = (value?: string | null) => value?.trim().toLocaleLowerCase("zh-TW") ?? "";
+  const name = normalise(input.fullName); const email = normalise(input.email); const phone = normalise(input.phone).replaceAll(/\s|-/g, "");
+  const rows = await listPeople();
+  return rows.filter(person => person.id !== input.excludeId && (
+    normalise(person.fullName) === name || (email && normalise(person.email) === email) || (phone && normalise(person.phone).replaceAll(/\s|-/g, "") === phone)
+  ));
+}
+
+export async function listGroupMembersForPersonLink() {
+  const db = await requireDb();
+  return db.select({ id: groupMembers.id, name: groupMembers.name, email: groupMembers.email, phone: groupMembers.phone, personId: groupMembers.personId, groupId: groups.id, groupName: groups.name })
+    .from(groupMembers).innerJoin(groups, eq(groupMembers.groupId, groups.id)).orderBy(asc(groups.name), asc(groupMembers.name));
 }
 
 export async function createGroupMember(data: typeof groupMembers.$inferInsert) {

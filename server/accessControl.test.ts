@@ -55,4 +55,10 @@ describe("多角色存取限制", () => {
     await expect(caller.pastoral.tasks()).rejects.toMatchObject({ code: "FORBIDDEN" });
     await expect(caller.pastoral.suggestions()).rejects.toMatchObject({ code: "FORBIDDEN" });
   });
+
+  it("拒絕非 Admin 讀取與建立中央人員主檔", async () => {
+    const caller = appRouter.createCaller(createContext("Leader"));
+    await expect(caller.people.list()).rejects.toMatchObject({ code: "FORBIDDEN" });
+    await expect(caller.people.create({ fullName: "測試會友" })).rejects.toMatchObject({ code: "FORBIDDEN" });
+  });
 });

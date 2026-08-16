@@ -11,6 +11,7 @@ import { AlertTriangle, CalendarClock, CheckCircle2, ClipboardList, Clock3, Plus
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { classifyDueAt } from "../../../shared/pastoralTasks";
+import { filterPastoralTasks, summarizeOpenPastoralTasks } from "../../../shared/pastoralTaskView";
 
 type Filter = "all" | "open" | "completed" | "dismissed";
 type Suggestion = { type: "care_followup" | "prayer_followup" | "attendance_followup"; title: string; detail: string; groupId?: number; groupMemberId?: number; missionaryId?: number; prayerRequestId?: number };
@@ -39,9 +40,8 @@ export default function PastoralWorkCenter() {
   const update = trpc.pastoral.update.useMutation({ onSuccess: () => { refresh(); toast.success("待辦已更新"); }, onError: error => toast.error(error.message) });
   const setStatus = trpc.pastoral.setStatus.useMutation({ onSuccess: () => { refresh(); toast.success("待辦狀態已更新"); }, onError: error => toast.error(error.message) });
   const now = new Date();
-  const visibleTasks = useMemo(() => (tasks.data ?? []).filter(task => filter === "all" || task.status === filter), [tasks.data, filter]);
-  const openTasks = (tasks.data ?? []).filter(task => task.status === "open");
-  const buckets = { overdue: openTasks.filter(task => classifyDueAt(task.dueAt, now) === "overdue").length, today: openTasks.filter(task => classifyDueAt(task.dueAt, now) === "today").length, upcoming: openTasks.filter(task => classifyDueAt(task.dueAt, now) === "upcoming").length };
+  const visibleTasks = useMemo(() => filterPastoralTasks(tasks.data ?? [], filter), [tasks.data, filter]);
+  const buckets = summarizeOpenPastoralTasks(tasks.data ?? [], now);
   const createSuggestion = (suggestion: Suggestion) => create.mutate({ ...suggestion, priority: suggestion.type === "attendance_followup" ? "high" : "normal", dueAt: Date.now() + 3 * 86_400_000, assignedToUserId: user?.id });
   if (user?.role !== "Admin" && user?.role !== "Leader") return <Card className="border-[#e3dbcf] bg-[#fdfcf9]"><CardContent className="py-16 text-center"><ClipboardList className="mx-auto h-9 w-9 text-[#9aab9e]" /><h2 className="mt-4 font-serif text-2xl text-[#405a49]">牧養工作中心僅限同工使用</h2><p className="mt-2 text-sm text-[#78827b]">請聯繫 Admin 申請 Leader 權限，取得受指派小組的牧養工作範圍。</p></CardContent></Card>;
   if (tasks.isError || suggestions.isError || assignees.isError || groups.isError) return <Card className="border-[#edcfca] bg-[#fffaf8]"><CardContent className="py-16 text-center"><AlertTriangle className="mx-auto h-9 w-9 text-[#b65b4c]" /><h2 className="mt-4 font-serif text-2xl text-[#7d4037]">牧養資料暫時無法載入</h2><p className="mx-auto mt-2 max-w-md text-sm leading-6 text-[#8a6d66]">系統未將此狀態視為空資料。請確認網路連線後重新整理；若問題持續，請聯繫 Admin。</p><Button onClick={retryLoad} className="mt-6 rounded-xl bg-[#8b4f43] hover:bg-[#713d34]"><Clock3 className="mr-2 h-4 w-4" />重新整理</Button></CardContent></Card>;

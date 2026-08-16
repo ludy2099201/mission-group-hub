@@ -318,6 +318,33 @@ export const appRouter = router({
       await writeAudit(ctx.user.id, `pastoralTask.${input.status}`, "pastoralTask", task.id, `牧養待辦狀態調整為 ${input.status}`);
     }),
   }),
+  people: router({
+    households: protectedProcedure.query(({ ctx }) => { requireAdmin(ctx.user.role); return db.listHouseholds(); }),
+    createHousehold: protectedProcedure.input(z.object({ name: z.string().trim().min(1).max(120), primaryPhone: z.string().trim().max(64).nullable().optional(), notes: optionalText, status: z.enum(["active", "inactive"]).default("active") })).mutation(async ({ ctx, input }) => {
+      requireAdmin(ctx.user.role); const id = await db.createHousehold(input); await writeAudit(ctx.user.id, "household.create", "household", id, `建立家庭主檔：${input.name}`); return id;
+    }),
+    updateHousehold: protectedProcedure.input(z.object({ id: z.number().int().positive(), name: z.string().trim().min(1).max(120).optional(), primaryPhone: z.string().trim().max(64).nullable().optional(), notes: optionalText, status: z.enum(["active", "inactive"]).optional() })).mutation(async ({ ctx, input }) => {
+      requireAdmin(ctx.user.role); const { id, ...data } = input; await db.updateHousehold(id, data); await writeAudit(ctx.user.id, "household.update", "household", id, "更新家庭主檔摘要");
+    }),
+    list: protectedProcedure.query(({ ctx }) => { requireAdmin(ctx.user.role); return db.listPeople(); }),
+    duplicates: protectedProcedure.input(z.object({ fullName: z.string().trim().min(1).max(120), email: z.string().trim().email().max(320).nullable().optional(), phone: z.string().trim().max(64).nullable().optional(), excludeId: z.number().int().positive().optional() })).query(({ ctx, input }) => {
+      requireAdmin(ctx.user.role); return db.findPersonDuplicates(input);
+    }),
+    create: protectedProcedure.input(z.object({ fullName: z.string().trim().min(1).max(120), email: z.string().trim().email().max(320).nullable().optional(), phone: z.string().trim().max(64).nullable().optional(), householdId: z.number().int().positive().nullable().optional(), status: z.enum(["active", "inactive"]).default("active"), allowPossibleDuplicate: z.boolean().default(false) })).mutation(async ({ ctx, input }) => {
+      requireAdmin(ctx.user.role); const duplicates = await db.findPersonDuplicates(input); if (duplicates.length && !input.allowPossibleDuplicate) throw new TRPCError({ code: "CONFLICT", message: `發現 ${duplicates.length} 筆可能重複的人員，請先確認後再建立。` });
+      const { allowPossibleDuplicate, ...data } = input; const id = await db.createPerson(data); await writeAudit(ctx.user.id, "person.create", "person", id, `建立人員主檔：${input.fullName}`); return id;
+    }),
+    update: protectedProcedure.input(z.object({ id: z.number().int().positive(), fullName: z.string().trim().min(1).max(120).optional(), email: z.string().trim().email().max(320).nullable().optional(), phone: z.string().trim().max(64).nullable().optional(), householdId: z.number().int().positive().nullable().optional(), status: z.enum(["active", "inactive"]).optional(), allowPossibleDuplicate: z.boolean().default(false) })).mutation(async ({ ctx, input }) => {
+      requireAdmin(ctx.user.role); const existing = await db.getPersonById(input.id); if (!existing) throw new TRPCError({ code: "NOT_FOUND", message: "找不到指定人員。" });
+      const candidate = { fullName: input.fullName ?? existing.fullName, email: input.email === undefined ? existing.email : input.email, phone: input.phone === undefined ? existing.phone : input.phone, excludeId: input.id }; const duplicates = await db.findPersonDuplicates(candidate); if (duplicates.length && !input.allowPossibleDuplicate) throw new TRPCError({ code: "CONFLICT", message: `發現 ${duplicates.length} 筆可能重複的人員，請先確認後再儲存。` });
+      const { id, allowPossibleDuplicate, ...data } = input; await db.updatePerson(id, data); await writeAudit(ctx.user.id, "person.update", "person", id, "更新人員主檔摘要");
+    }),
+    groupMembersForLink: protectedProcedure.query(({ ctx }) => { requireAdmin(ctx.user.role); return db.listGroupMembersForPersonLink(); }),
+    linkGroupMember: protectedProcedure.input(z.object({ groupMemberId: z.number().int().positive(), personId: z.number().int().positive().nullable() })).mutation(async ({ ctx, input }) => {
+      requireAdmin(ctx.user.role); const member = await db.getGroupMemberById(input.groupMemberId); if (!member) throw new TRPCError({ code: "NOT_FOUND", message: "找不到小組成員。" }); if (input.personId && !await db.getPersonById(input.personId)) throw new TRPCError({ code: "NOT_FOUND", message: "找不到指定人員主檔。" });
+      await db.updateGroupMemberPersonLink(input.groupMemberId, input.personId); await writeAudit(ctx.user.id, input.personId ? "groupMember.person.link" : "groupMember.person.unlink", "groupMember", input.groupMemberId, input.personId ? `連結人員主檔 #${input.personId}` : "解除人員主檔連結");
+    }),
+  }),
   activities: router({
     events: protectedProcedure.query(({ ctx }) => db.listEvents(ctx.user.role === "Member")),
     createEvent: protectedProcedure.input(z.object({ title: z.string().trim().min(1).max(180), description: optionalText, location: z.string().trim().max(180).nullable().optional(), startsAt: z.number().int().positive(), endsAt: z.number().int().positive().nullable().optional(), isPublished: z.boolean().default(true), groupIds: z.array(z.number().int().positive()).default([]) })).mutation(async ({ ctx, input }) => {
