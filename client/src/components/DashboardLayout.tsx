@@ -4,6 +4,7 @@ import { useIsMobile } from "@/hooks/useMobile";
 import {
   Bell,
   CalendarDays,
+  CalendarCheck2,
   ClipboardList,
   ContactRound,
   ChevronDown,
@@ -32,6 +33,7 @@ const menuItems: { icon: typeof LayoutDashboard; label: string; path: string; ro
   { icon: ClipboardList, label: "牧養工作", path: "/pastoral-work", roles: ["Admin", "Leader"] },
   { icon: ContactRound, label: "人員主檔", path: "/people", roles: ["Admin"] },
   { icon: CalendarDays, label: "活動行事曆", path: "/activities", roles: ["Admin", "Leader", "Member"] },
+  { icon: CalendarCheck2, label: "活動報名", path: "/event-registration", roles: ["Admin"] },
   { icon: Megaphone, label: "公告中心", path: "/announcements", roles: ["Admin", "Leader", "Member"] },
   { icon: ShieldCheck, label: "角色權限", path: "/permissions", roles: ["Admin"] },
   { icon: ShieldCheck, label: "資料治理", path: "/governance", roles: ["Admin"] },

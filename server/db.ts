@@ -7,6 +7,7 @@ import {
   attendanceRecords,
   careLogs,
   eventGroups,
+  eventRegistrations,
   events,
   groupMembers,
   groupMeetings,
@@ -428,6 +429,56 @@ export async function listEvents(publishedOnly = false) {
   return publishedOnly
     ? db.select().from(events).where(eq(events.isPublished, true)).orderBy(asc(events.startsAt))
     : db.select().from(events).orderBy(asc(events.startsAt));
+}
+
+export async function getEventById(id: number) {
+  const db = await requireDb();
+  const rows = await db.select().from(events).where(eq(events.id, id)).limit(1);
+  return rows[0];
+}
+
+export async function listEventRegistrations(eventId: number) {
+  const db = await requireDb();
+  return db.select({ id: eventRegistrations.id, personId: people.id, personName: people.fullName, personEmail: people.email, personPhone: people.phone, status: eventRegistrations.status, checkedInAt: eventRegistrations.checkedInAt, createdAt: eventRegistrations.createdAt })
+    .from(eventRegistrations).innerJoin(people, eq(eventRegistrations.personId, people.id)).where(eq(eventRegistrations.eventId, eventId)).orderBy(asc(eventRegistrations.createdAt));
+}
+
+export async function countActiveEventRegistrations(eventId: number) {
+  const db = await requireDb();
+  const rows = await db.select({ id: eventRegistrations.id }).from(eventRegistrations).where(and(eq(eventRegistrations.eventId, eventId), eq(eventRegistrations.status, "registered")));
+  return rows.length;
+}
+
+export async function listEventRegistrationSummaries() {
+  const db = await requireDb();
+  const rows = await db.select({ eventId: eventRegistrations.eventId, status: eventRegistrations.status }).from(eventRegistrations);
+  const summaries = new Map<number, { eventId: number; registered: number; waitlisted: number; cancelled: number }>();
+  rows.forEach(row => {
+    const summary = summaries.get(row.eventId) ?? { eventId: row.eventId, registered: 0, waitlisted: 0, cancelled: 0 };
+    summary[row.status] += 1; summaries.set(row.eventId, summary);
+  });
+  return Array.from(summaries.values());
+}
+
+export async function getEventRegistration(eventId: number, personId: number) {
+  const db = await requireDb();
+  const rows = await db.select().from(eventRegistrations).where(and(eq(eventRegistrations.eventId, eventId), eq(eventRegistrations.personId, personId))).limit(1);
+  return rows[0];
+}
+
+export async function upsertEventRegistration(eventId: number, personId: number, status: "registered" | "waitlisted") {
+  const db = await requireDb();
+  await db.insert(eventRegistrations).values({ eventId, personId, status, checkedInAt: null }).onDuplicateKeyUpdate({ set: { status, checkedInAt: null, updatedAt: new Date() } });
+}
+
+export async function cancelEventRegistration(eventId: number, personId: number) {
+  const db = await requireDb();
+  await db.update(eventRegistrations).set({ status: "cancelled", checkedInAt: null, updatedAt: new Date() }).where(and(eq(eventRegistrations.eventId, eventId), eq(eventRegistrations.personId, personId)));
+}
+
+export async function checkInEventRegistration(eventId: number, personId: number) {
+  const db = await requireDb();
+  await db.update(eventRegistrations).set({ checkedInAt: new Date(), updatedAt: new Date() }).where(and(eq(eventRegistrations.eventId, eventId), eq(eventRegistrations.personId, personId), eq(eventRegistrations.status, "registered")));
 }
 
 export async function createEvent(data: typeof events.$inferInsert, groupIds: number[]) {

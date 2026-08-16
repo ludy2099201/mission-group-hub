@@ -22,6 +22,7 @@ export const followUpStatuses = ["none", "pending", "completed"] as const;
 export const pastoralTaskTypes = ["care_followup", "prayer_followup", "attendance_followup", "general"] as const;
 export const pastoralTaskPriorities = ["low", "normal", "high"] as const;
 export const pastoralTaskStatuses = ["open", "completed", "dismissed"] as const;
+export const eventRegistrationStatuses = ["registered", "waitlisted", "cancelled"] as const;
 
 export const users = mysqlTable("users", {
   id: int("id").autoincrement().primaryKey(),
@@ -212,6 +213,7 @@ export const events = mysqlTable("events", {
   title: varchar("title", { length: 180 }).notNull(),
   description: text("description"),
   location: varchar("location", { length: 180 }),
+  capacity: int("capacity"),
   startsAt: timestamp("startsAt").notNull(),
   endsAt: timestamp("endsAt"),
   isPublished: boolean("isPublished").default(true).notNull(),
@@ -219,6 +221,19 @@ export const events = mysqlTable("events", {
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 }, (table) => [index("events_startsAt_idx").on(table.startsAt)]);
+
+export const eventRegistrations = mysqlTable("eventRegistrations", {
+  id: int("id").autoincrement().primaryKey(),
+  eventId: int("eventId").notNull().references(() => events.id),
+  personId: int("personId").notNull().references(() => people.id),
+  status: mysqlEnum("status", eventRegistrationStatuses).default("registered").notNull(),
+  checkedInAt: timestamp("checkedInAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => [
+  uniqueIndex("eventRegistration_event_person_unique").on(table.eventId, table.personId),
+  index("eventRegistration_event_status_idx").on(table.eventId, table.status),
+]);
 
 export const eventGroups = mysqlTable("eventGroups", {
   id: int("id").autoincrement().primaryKey(),

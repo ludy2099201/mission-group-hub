@@ -9,6 +9,7 @@ import { canLeadGroups, canManageChurch, canViewSensitiveGiving } from "./rolePo
 import { storagePut } from "./storage";
 import { rowsToCsv } from "../shared/csv";
 import { buildAttendanceSuggestions } from "../shared/pastoralTasks";
+import { canCheckIn, resolveRegistrationStatus } from "../shared/eventRegistration";
 
 const idInput = z.object({ id: z.number().int().positive() });
 const optionalText = z.string().trim().max(1000).nullable().optional();
@@ -347,12 +348,31 @@ export const appRouter = router({
   }),
   activities: router({
     events: protectedProcedure.query(({ ctx }) => db.listEvents(ctx.user.role === "Member")),
-    createEvent: protectedProcedure.input(z.object({ title: z.string().trim().min(1).max(180), description: optionalText, location: z.string().trim().max(180).nullable().optional(), startsAt: z.number().int().positive(), endsAt: z.number().int().positive().nullable().optional(), isPublished: z.boolean().default(true), groupIds: z.array(z.number().int().positive()).default([]) })).mutation(async ({ ctx, input }) => {
+    registrationSummary: protectedProcedure.query(({ ctx }) => { requireAdmin(ctx.user.role); return db.listEventRegistrationSummaries(); }),
+    createEvent: protectedProcedure.input(z.object({ title: z.string().trim().min(1).max(180), description: optionalText, location: z.string().trim().max(180).nullable().optional(), capacity: z.number().int().positive().nullable().optional(), startsAt: z.number().int().positive(), endsAt: z.number().int().positive().nullable().optional(), isPublished: z.boolean().default(true), groupIds: z.array(z.number().int().positive()).default([]) })).mutation(async ({ ctx, input }) => {
       requireAdmin(ctx.user.role);
       const { groupIds, startsAt, endsAt, ...data } = input;
       const id = await db.createEvent({ ...data, startsAt: new Date(startsAt), endsAt: endsAt ? new Date(endsAt) : null, createdBy: ctx.user.id }, groupIds);
       await writeAudit(ctx.user.id, "event.create", "event", id, `建立活動：${data.title}`);
       return id;
+    }),
+    registrations: protectedProcedure.input(z.object({ eventId: z.number().int().positive() })).query(async ({ ctx, input }) => {
+      requireAdmin(ctx.user.role); return db.listEventRegistrations(input.eventId);
+    }),
+    register: protectedProcedure.input(z.object({ eventId: z.number().int().positive(), personId: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
+      requireAdmin(ctx.user.role); const [event, person] = await Promise.all([db.getEventById(input.eventId), db.getPersonById(input.personId)]);
+      if (!event) throw new TRPCError({ code: "NOT_FOUND", message: "找不到指定活動。" }); if (!person) throw new TRPCError({ code: "NOT_FOUND", message: "找不到指定人員。" });
+      const existing = await db.getEventRegistration(input.eventId, input.personId); if (existing?.status === "registered" || existing?.status === "waitlisted") return { status: existing.status, unchanged: true };
+      const activeRegistrations = await db.countActiveEventRegistrations(input.eventId); const status = resolveRegistrationStatus(event.capacity, activeRegistrations);
+      await db.upsertEventRegistration(input.eventId, input.personId, status); await writeAudit(ctx.user.id, "event.registration.create", "event", input.eventId, `${person.fullName} 報名，狀態：${status}`); return { status, unchanged: false };
+    }),
+    cancelRegistration: protectedProcedure.input(z.object({ eventId: z.number().int().positive(), personId: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
+      requireAdmin(ctx.user.role); const registration = await db.getEventRegistration(input.eventId, input.personId); if (!registration || registration.status === "cancelled") throw new TRPCError({ code: "NOT_FOUND", message: "找不到有效報名紀錄。" });
+      await db.cancelEventRegistration(input.eventId, input.personId); await writeAudit(ctx.user.id, "event.registration.cancel", "event", input.eventId, `取消人員 #${input.personId} 的活動報名`);
+    }),
+    checkIn: protectedProcedure.input(z.object({ eventId: z.number().int().positive(), personId: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
+      requireAdmin(ctx.user.role); const registration = await db.getEventRegistration(input.eventId, input.personId); if (!registration || !canCheckIn(registration.status)) throw new TRPCError({ code: "BAD_REQUEST", message: "僅已報名的人員可以簽到。" });
+      await db.checkInEventRegistration(input.eventId, input.personId); await writeAudit(ctx.user.id, "event.registration.checkIn", "event", input.eventId, `人員 #${input.personId} 完成簽到`);
     }),
     announcements: protectedProcedure.query(({ ctx }) => db.listAnnouncements(ctx.user.role === "Member")),
     createAnnouncement: protectedProcedure.input(z.object({ title: z.string().trim().min(1).max(180), content: z.string().trim().min(1).max(10000), isPublished: z.boolean().default(true), groupIds: z.array(z.number().int().positive()).default([]) })).mutation(async ({ ctx, input }) => {

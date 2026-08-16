@@ -8,6 +8,7 @@ import ManagementPage, { type ManagementView } from "./pages/ManagementPage";
 import NotFound from "./pages/NotFound";
 import PastoralWorkCenter from "./pages/PastoralWorkCenter";
 import PeopleDirectory from "./pages/PeopleDirectory";
+import EventRegistrationCenter from "./pages/EventRegistrationCenter";
 
 function Screen({ view }: { view: ManagementView }) {
   return <DashboardLayout><ManagementPage view={view} /></DashboardLayout>;
@@ -19,6 +20,10 @@ function PastoralScreen() {
 
 function PeopleScreen() {
   return <DashboardLayout><PeopleDirectory /></DashboardLayout>;
+}
+
+function EventRegistrationScreen() {
+  return <DashboardLayout><EventRegistrationCenter /></DashboardLayout>;
 }
 
 function App() {
@@ -33,6 +38,7 @@ function App() {
     <Route path="/governance"><Screen view="governance" /></Route>
     <Route path="/pastoral-work"><PastoralScreen /></Route>
     <Route path="/people"><PeopleScreen /></Route>
+    <Route path="/event-registration"><EventRegistrationScreen /></Route>
     <Route><NotFound /></Route>
   </Switch></TooltipProvider></ThemeProvider></ErrorBoundary>;
 }
