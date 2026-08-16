@@ -8,6 +8,7 @@ import * as db from "./db";
 import { canLeadGroups, canManageChurch, canViewSensitiveGiving } from "./rolePolicy";
 import { storagePut } from "./storage";
 import { rowsToCsv } from "../shared/csv";
+import { getImportTemplate, importTemplateKeys } from "../shared/importTemplates";
 import { buildAttendanceSuggestions } from "../shared/pastoralTasks";
 import { canCheckIn, resolveRegistrationStatus } from "../shared/eventRegistration";
 
@@ -112,6 +113,11 @@ export const appRouter = router({
       const csv = rowsToCsv(rows);
       await writeAudit(ctx.user.id, "data.export", "export", input.resource, `匯出 ${input.resource}，共 ${rows.length} 筆`);
       return { filename: `mission-group-hub_${input.resource}_${new Date().toISOString().slice(0, 10)}.csv`, csv, rowCount: rows.length };
+    }),
+    downloadImportTemplate: protectedProcedure.input(z.object({ template: z.enum(importTemplateKeys) })).mutation(async ({ ctx, input }) => {
+      requireAdmin(ctx.user.role); const template = getImportTemplate(input.template);
+      await writeAudit(ctx.user.id, "data.template.download", "importTemplate", input.template, `下載真實資料匯入模板：${template.label}`);
+      return template;
     }),
   }),
   missionaries: router({

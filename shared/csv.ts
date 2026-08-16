@@ -11,3 +11,7 @@ export function rowsToCsv(rows: Record<string, unknown>[]): string {
   rows.forEach(row => lines.push(columns.map(column => escapeCsvValue(row[column])).join(",")));
   return `\uFEFF${lines.join("\r\n")}`;
 }
+
+export function headersToCsv(columns: string[]): string {
+  return `\uFEFF${columns.map(escapeCsvValue).join(",")}\r\n`;
+}
