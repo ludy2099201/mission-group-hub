@@ -13,6 +13,7 @@ import {
   groups,
   InsertUser,
   missionaries,
+  pastoralTasks,
   prayerRequests,
   supporters,
   supportCommitments,
@@ -74,6 +75,11 @@ export async function getUserByOpenId(openId: string) {
 export async function listUsers() {
   const db = await requireDb();
   return db.select({ id: users.id, name: users.name, email: users.email, role: users.role, isActive: users.isActive, deactivatedAt: users.deactivatedAt }).from(users).orderBy(asc(users.name));
+}
+
+export async function listActiveUsers() {
+  const db = await requireDb();
+  return db.select({ id: users.id, name: users.name, email: users.email, role: users.role }).from(users).where(eq(users.isActive, true)).orderBy(asc(users.name));
 }
 
 export async function updateUserRole(userId: number, role: "Admin" | "Leader" | "Member") {
@@ -296,6 +302,62 @@ export async function createCareLog(data: typeof careLogs.$inferInsert) {
   const db = await requireDb();
   const result = await db.insert(careLogs).values(data);
   return Number(result[0].insertId);
+}
+
+export async function getPastoralTaskById(id: number) {
+  const db = await requireDb();
+  const rows = await db.select().from(pastoralTasks).where(eq(pastoralTasks.id, id)).limit(1);
+  return rows[0];
+}
+
+export async function createPastoralTask(data: typeof pastoralTasks.$inferInsert) {
+  const db = await requireDb();
+  const result = await db.insert(pastoralTasks).values(data);
+  return Number(result[0].insertId);
+}
+
+export async function updatePastoralTask(id: number, data: Partial<typeof pastoralTasks.$inferInsert>) {
+  const db = await requireDb();
+  await db.update(pastoralTasks).set({ ...data, updatedAt: new Date() }).where(eq(pastoralTasks.id, id));
+}
+
+export async function listPastoralTasks(user: { id: number; role: "Admin" | "Leader" | "Member" }) {
+  const db = await requireDb();
+  const query = db.select({
+    id: pastoralTasks.id, type: pastoralTasks.type, title: pastoralTasks.title, detail: pastoralTasks.detail, dueAt: pastoralTasks.dueAt,
+    priority: pastoralTasks.priority, status: pastoralTasks.status, completedAt: pastoralTasks.completedAt, groupId: pastoralTasks.groupId,
+    groupMemberId: pastoralTasks.groupMemberId, missionaryId: pastoralTasks.missionaryId, prayerRequestId: pastoralTasks.prayerRequestId,
+    assignedToUserId: pastoralTasks.assignedToUserId, assignedToName: users.name, groupName: groups.name, memberName: groupMembers.name,
+    missionaryName: missionaries.name, createdAt: pastoralTasks.createdAt,
+  }).from(pastoralTasks)
+    .innerJoin(users, eq(pastoralTasks.assignedToUserId, users.id))
+    .leftJoin(groups, eq(pastoralTasks.groupId, groups.id))
+    .leftJoin(groupMembers, eq(pastoralTasks.groupMemberId, groupMembers.id))
+    .leftJoin(missionaries, eq(pastoralTasks.missionaryId, missionaries.id));
+  const rows = user.role === "Admin" ? await query.orderBy(asc(pastoralTasks.dueAt), desc(pastoralTasks.createdAt)) : await query.where(eq(pastoralTasks.assignedToUserId, user.id)).orderBy(asc(pastoralTasks.dueAt), desc(pastoralTasks.createdAt));
+  return rows;
+}
+
+export async function listCareFollowupSuggestions(leaderUserId?: number) {
+  const db = await requireDb();
+  const query = db.select({ id: careLogs.id, memberId: groupMembers.id, memberName: groupMembers.name, groupId: groups.id, groupName: groups.name, careDate: careLogs.careDate, summary: careLogs.summary })
+    .from(careLogs).innerJoin(groupMembers, eq(careLogs.groupMemberId, groupMembers.id)).innerJoin(groups, eq(groupMembers.groupId, groups.id));
+  return leaderUserId === undefined ? query.where(eq(careLogs.followUpStatus, "pending")).orderBy(desc(careLogs.careDate)) : query.where(and(eq(careLogs.followUpStatus, "pending"), eq(groups.leaderUserId, leaderUserId))).orderBy(desc(careLogs.careDate));
+}
+
+export async function listPrayerFollowupSuggestions() {
+  const db = await requireDb();
+  return db.select({ id: prayerRequests.id, missionaryId: missionaries.id, missionaryName: missionaries.name, title: prayerRequests.title, updatedAt: prayerRequests.updatedAt })
+    .from(prayerRequests).innerJoin(missionaries, eq(prayerRequests.missionaryId, missionaries.id))
+    .where(and(eq(prayerRequests.status, "praying"), eq(prayerRequests.isArchived, false))).orderBy(desc(prayerRequests.updatedAt));
+}
+
+export async function listRecentAbsenceRecords(leaderUserId?: number) {
+  const db = await requireDb();
+  const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - 30);
+  const query = db.select({ memberId: groupMembers.id, memberName: groupMembers.name, groupId: groups.id, groupName: groups.name, heldAt: groupMeetings.heldAt })
+    .from(attendanceRecords).innerJoin(groupMeetings, eq(attendanceRecords.meetingId, groupMeetings.id)).innerJoin(groups, eq(groupMeetings.groupId, groups.id)).innerJoin(groupMembers, eq(attendanceRecords.groupMemberId, groupMembers.id));
+  return leaderUserId === undefined ? query.where(and(eq(attendanceRecords.status, "absent"), gte(groupMeetings.heldAt, cutoff))) : query.where(and(eq(attendanceRecords.status, "absent"), gte(groupMeetings.heldAt, cutoff), eq(groups.leaderUserId, leaderUserId)));
 }
 
 export async function listEvents(publishedOnly = false) {

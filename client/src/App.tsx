@@ -6,9 +6,14 @@ import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import ManagementPage, { type ManagementView } from "./pages/ManagementPage";
 import NotFound from "./pages/NotFound";
+import PastoralWorkCenter from "./pages/PastoralWorkCenter";
 
 function Screen({ view }: { view: ManagementView }) {
   return <DashboardLayout><ManagementPage view={view} /></DashboardLayout>;
+}
+
+function PastoralScreen() {
+  return <DashboardLayout><PastoralWorkCenter /></DashboardLayout>;
 }
 
 function App() {
@@ -21,6 +26,7 @@ function App() {
     <Route path="/announcements"><Screen view="announcements" /></Route>
     <Route path="/permissions"><Screen view="permissions" /></Route>
     <Route path="/governance"><Screen view="governance" /></Route>
+    <Route path="/pastoral-work"><PastoralScreen /></Route>
     <Route><NotFound /></Route>
   </Switch></TooltipProvider></ThemeProvider></ErrorBoundary>;
 }

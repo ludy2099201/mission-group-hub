@@ -19,6 +19,9 @@ export const commitmentStatuses = ["active", "paused", "ended"] as const;
 export const attendanceStatuses = ["attended", "absent", "excused"] as const;
 export const careMethods = ["phone", "visit", "message", "meeting", "other"] as const;
 export const followUpStatuses = ["none", "pending", "completed"] as const;
+export const pastoralTaskTypes = ["care_followup", "prayer_followup", "attendance_followup", "general"] as const;
+export const pastoralTaskPriorities = ["low", "normal", "high"] as const;
+export const pastoralTaskStatuses = ["open", "completed", "dismissed"] as const;
 
 export const users = mysqlTable("users", {
   id: int("id").autoincrement().primaryKey(),
@@ -153,6 +156,29 @@ export const careLogs = mysqlTable("careLogs", {
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 }, (table) => [index("careLogs_member_idx").on(table.groupMemberId)]);
+
+export const pastoralTasks = mysqlTable("pastoralTasks", {
+  id: int("id").autoincrement().primaryKey(),
+  type: mysqlEnum("type", pastoralTaskTypes).default("general").notNull(),
+  title: varchar("title", { length: 180 }).notNull(),
+  detail: text("detail"),
+  assignedToUserId: int("assignedToUserId").notNull().references(() => users.id),
+  dueAt: timestamp("dueAt"),
+  priority: mysqlEnum("priority", pastoralTaskPriorities).default("normal").notNull(),
+  status: mysqlEnum("status", pastoralTaskStatuses).default("open").notNull(),
+  completedAt: timestamp("completedAt"),
+  groupId: int("groupId").references(() => groups.id),
+  groupMemberId: int("groupMemberId").references(() => groupMembers.id),
+  missionaryId: int("missionaryId").references(() => missionaries.id),
+  prayerRequestId: int("prayerRequestId").references(() => prayerRequests.id),
+  createdBy: int("createdBy").notNull().references(() => users.id),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => [
+  index("pastoralTasks_assignee_status_idx").on(table.assignedToUserId, table.status),
+  index("pastoralTasks_due_idx").on(table.dueAt),
+  index("pastoralTasks_group_idx").on(table.groupId),
+]);
 
 export const events = mysqlTable("events", {
   id: int("id").autoincrement().primaryKey(),

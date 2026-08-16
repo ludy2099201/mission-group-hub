@@ -11,6 +11,8 @@ function createContext(role: "Admin" | "Leader" | "Member"): TrpcContext {
       email: "test@example.com",
       loginMethod: "test",
       role,
+      isActive: true,
+      deactivatedAt: null,
       createdAt: new Date(),
       updatedAt: new Date(),
       lastSignedIn: new Date(),
@@ -46,5 +48,11 @@ describe("多角色存取限制", () => {
     const caller = appRouter.createCaller(createContext("Leader"));
     await expect(caller.users.list()).rejects.toMatchObject({ code: "FORBIDDEN" });
     await expect(caller.groups.create({ name: "測試小組", district: "測試牧區", status: "active" })).rejects.toMatchObject({ code: "FORBIDDEN" });
+  });
+
+  it("拒絕 Member 存取牧養待辦與工作建議", async () => {
+    const caller = appRouter.createCaller(createContext("Member"));
+    await expect(caller.pastoral.tasks()).rejects.toMatchObject({ code: "FORBIDDEN" });
+    await expect(caller.pastoral.suggestions()).rejects.toMatchObject({ code: "FORBIDDEN" });
   });
 });

@@ -8,6 +8,7 @@ import * as db from "./db";
 import { canLeadGroups, canManageChurch, canViewSensitiveGiving } from "./rolePolicy";
 import { storagePut } from "./storage";
 import { rowsToCsv } from "../shared/csv";
+import { buildAttendanceSuggestions } from "../shared/pastoralTasks";
 
 const idInput = z.object({ id: z.number().int().positive() });
 const optionalText = z.string().trim().max(1000).nullable().optional();
@@ -31,6 +32,17 @@ async function requireOwnedGroup(user: { id: number; role: "Admin" | "Leader" | 
   if (!group) throw new TRPCError({ code: "NOT_FOUND", message: "找不到指定小組。" });
   if (user.role === "Leader" && group.leaderUserId !== user.id) throw new TRPCError({ code: "FORBIDDEN", message: "您只能管理受指派的小組。" });
   return group;
+}
+
+async function requirePastoralTaskAccess(user: { id: number; role: "Admin" | "Leader" | "Member" }, taskId: number) {
+  requireGroupLeader(user.role);
+  const task = await db.getPastoralTaskById(taskId);
+  if (!task) throw new TRPCError({ code: "NOT_FOUND", message: "找不到指定待辦。" });
+  if (user.role === "Leader" && task.assignedToUserId !== user.id) {
+    if (!task.groupId) throw new TRPCError({ code: "FORBIDDEN", message: "您只能處理指派給自己的待辦。" });
+    await requireOwnedGroup(user, task.groupId);
+  }
+  return task;
 }
 
 const missionaryInput = z.object({
@@ -242,6 +254,68 @@ export const appRouter = router({
       const id = await db.createCareLog({ ...input, createdBy: ctx.user.id, careDate: new Date(input.careDate) });
       await writeAudit(ctx.user.id, "careLog.create", "careLog", id, `新增關懷紀錄：成員 #${input.groupMemberId}`);
       return id;
+    }),
+  }),
+  pastoral: router({
+    assignees: protectedProcedure.query(async ({ ctx }) => {
+      requireGroupLeader(ctx.user.role);
+      return ctx.user.role === "Admin" ? db.listActiveUsers() : [{ id: ctx.user.id, name: ctx.user.name, email: ctx.user.email, role: ctx.user.role }];
+    }),
+    groups: protectedProcedure.query(async ({ ctx }) => {
+      requireGroupLeader(ctx.user.role);
+      const rows = await db.listGroups();
+      return ctx.user.role === "Admin" ? rows.filter(group => group.status === "active") : rows.filter(group => group.status === "active" && group.leaderUserId === ctx.user.id);
+    }),
+    tasks: protectedProcedure.query(({ ctx }) => {
+      requireGroupLeader(ctx.user.role);
+      return db.listPastoralTasks(ctx.user);
+    }),
+    suggestions: protectedProcedure.query(async ({ ctx }) => {
+      requireGroupLeader(ctx.user.role);
+      const leaderId = ctx.user.role === "Leader" ? ctx.user.id : undefined;
+      const [care, absences, prayers] = await Promise.all([
+        db.listCareFollowupSuggestions(leaderId),
+        db.listRecentAbsenceRecords(leaderId),
+        ctx.user.role === "Admin" ? db.listPrayerFollowupSuggestions() : Promise.resolve([]),
+      ]);
+      return {
+        care: care.map(item => ({ type: "care_followup" as const, title: `關懷跟進：${item.memberName}`, detail: `關懷紀錄待跟進：${item.groupName}`, groupId: item.groupId, groupMemberId: item.memberId, careLogId: item.id })),
+        attendance: buildAttendanceSuggestions(absences).map(item => ({ type: "attendance_followup" as const, ...item })),
+        prayers: prayers.map(item => ({ type: "prayer_followup" as const, title: `代禱跟進：${item.title}`, detail: `宣教士：${item.missionaryName}`, missionaryId: item.missionaryId, prayerRequestId: item.id })),
+      };
+    }),
+    create: protectedProcedure.input(z.object({
+      type: z.enum(["care_followup", "prayer_followup", "attendance_followup", "general"]),
+      title: z.string().trim().min(1).max(180), detail: optionalText, assignedToUserId: z.number().int().positive().optional(),
+      dueAt: z.number().int().positive().nullable().optional(), priority: z.enum(["low", "normal", "high"]).default("normal"),
+      groupId: z.number().int().positive().nullable().optional(), groupMemberId: z.number().int().positive().nullable().optional(),
+      missionaryId: z.number().int().positive().nullable().optional(), prayerRequestId: z.number().int().positive().nullable().optional(),
+    })).mutation(async ({ ctx, input }) => {
+      requireGroupLeader(ctx.user.role);
+      const assignedToUserId = ctx.user.role === "Leader" ? ctx.user.id : (input.assignedToUserId ?? ctx.user.id);
+      if (ctx.user.role === "Leader" && input.groupId) await requireOwnedGroup(ctx.user, input.groupId);
+      if (ctx.user.role === "Leader" && !input.groupId && input.type !== "prayer_followup") throw new TRPCError({ code: "BAD_REQUEST", message: "Leader 建立的小組待辦需指定受指派小組。" });
+      const { dueAt, ...data } = input;
+      const id = await db.createPastoralTask({ ...data, assignedToUserId, dueAt: dueAt ? new Date(dueAt) : null, createdBy: ctx.user.id, status: "open", completedAt: null });
+      await writeAudit(ctx.user.id, "pastoralTask.create", "pastoralTask", id, `建立牧養待辦：${input.title}`);
+      return id;
+    }),
+    update: protectedProcedure.input(z.object({
+      id: z.number().int().positive(), title: z.string().trim().min(1).max(180).optional(), detail: optionalText,
+      dueAt: z.number().int().positive().nullable().optional(), priority: z.enum(["low", "normal", "high"]).optional(),
+      assignedToUserId: z.number().int().positive().optional(), groupId: z.number().int().positive().nullable().optional(),
+    })).mutation(async ({ ctx, input }) => {
+      const task = await requirePastoralTaskAccess(ctx.user, input.id);
+      if (ctx.user.role === "Leader" && input.assignedToUserId && input.assignedToUserId !== ctx.user.id) throw new TRPCError({ code: "FORBIDDEN", message: "Leader 無法轉派待辦。" });
+      if (ctx.user.role === "Leader" && input.groupId) await requireOwnedGroup(ctx.user, input.groupId);
+      const { id, dueAt, ...data } = input;
+      await db.updatePastoralTask(id, { ...data, dueAt: dueAt === undefined ? undefined : dueAt === null ? null : new Date(dueAt) });
+      await writeAudit(ctx.user.id, "pastoralTask.update", "pastoralTask", task.id, "更新牧養待辦摘要或到期日");
+    }),
+    setStatus: protectedProcedure.input(z.object({ id: z.number().int().positive(), status: z.enum(["open", "completed", "dismissed"]) })).mutation(async ({ ctx, input }) => {
+      const task = await requirePastoralTaskAccess(ctx.user, input.id);
+      await db.updatePastoralTask(task.id, { status: input.status, completedAt: input.status === "completed" ? new Date() : null });
+      await writeAudit(ctx.user.id, `pastoralTask.${input.status}`, "pastoralTask", task.id, `牧養待辦狀態調整為 ${input.status}`);
     }),
   }),
   activities: router({
