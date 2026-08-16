@@ -23,6 +23,7 @@ export const pastoralTaskTypes = ["care_followup", "prayer_followup", "attendanc
 export const pastoralTaskPriorities = ["low", "normal", "high"] as const;
 export const pastoralTaskStatuses = ["open", "completed", "dismissed"] as const;
 export const eventRegistrationStatuses = ["registered", "waitlisted", "cancelled"] as const;
+export const groupVisibilities = ["public", "restricted", "confidential"] as const;
 
 export const users = mysqlTable("users", {
   id: int("id").autoincrement().primaryKey(),
@@ -110,6 +111,7 @@ export const groups = mysqlTable("groups", {
   leaderUserId: int("leaderUserId").references(() => users.id),
   description: text("description"),
   status: mysqlEnum("status", missionaryStatuses).default("active").notNull(),
+  visibility: mysqlEnum("visibility", groupVisibilities).default("restricted").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 }, (table) => [index("groups_leader_idx").on(table.leaderUserId)]);

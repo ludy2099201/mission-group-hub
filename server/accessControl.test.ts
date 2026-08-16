@@ -56,6 +56,13 @@ describe("多角色存取限制", () => {
     await expect(caller.pastoral.suggestions()).rejects.toMatchObject({ code: "FORBIDDEN" });
   });
 
+  it("拒絕 Member 存取任何小組的名冊、出席與關懷細節", async () => {
+    const caller = appRouter.createCaller(createContext("Member"));
+    await expect(caller.groups.members({ groupId: 1 })).rejects.toMatchObject({ code: "FORBIDDEN" });
+    await expect(caller.groups.attendanceSummary({ groupId: 1 })).rejects.toMatchObject({ code: "FORBIDDEN" });
+    await expect(caller.groups.careLogs({ groupId: 1 })).rejects.toMatchObject({ code: "FORBIDDEN" });
+  });
+
   it("拒絕非 Admin 讀取與建立中央人員主檔", async () => {
     const caller = appRouter.createCaller(createContext("Leader"));
     await expect(caller.people.list()).rejects.toMatchObject({ code: "FORBIDDEN" });

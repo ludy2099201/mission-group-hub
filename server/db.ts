@@ -215,8 +215,24 @@ export async function listGroups() {
     leaderName: users.name,
     description: groups.description,
     status: groups.status,
+    visibility: groups.visibility,
     createdAt: groups.createdAt,
   }).from(groups).leftJoin(users, eq(groups.leaderUserId, users.id)).orderBy(asc(groups.district), asc(groups.name));
+}
+
+export async function listPublicGroups() {
+  const db = await requireDb();
+  return db.select({
+    id: groups.id,
+    name: groups.name,
+    district: groups.district,
+    leaderUserId: groups.leaderUserId,
+    leaderName: users.name,
+    description: groups.description,
+    status: groups.status,
+    visibility: groups.visibility,
+    createdAt: groups.createdAt,
+  }).from(groups).leftJoin(users, eq(groups.leaderUserId, users.id)).where(and(eq(groups.status, "active"), eq(groups.visibility, "public"))).orderBy(asc(groups.district), asc(groups.name));
 }
 
 export async function getGroupById(id: number) {

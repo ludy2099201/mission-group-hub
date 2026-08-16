@@ -30,7 +30,7 @@ const menuItems: { icon: typeof LayoutDashboard; label: string; path: string; ro
   { icon: LayoutDashboard, label: "儀表板", path: "/", roles: ["Admin", "Leader", "Member"] },
   { icon: Sprout, label: "宣教士", path: "/missionaries", roles: ["Admin", "Leader", "Member"] },
   { icon: HeartHandshake, label: "代禱事項", path: "/prayers", roles: ["Admin", "Leader", "Member"] },
-  { icon: UsersRound, label: "小組牧養", path: "/groups", roles: ["Admin", "Leader"] },
+  { icon: UsersRound, label: "小組牧養", path: "/groups", roles: ["Admin", "Leader", "Member"] },
   { icon: ClipboardList, label: "牧養工作", path: "/pastoral-work", roles: ["Admin", "Leader"] },
   { icon: ContactRound, label: "人員主檔", path: "/people", roles: ["Admin"] },
   { icon: CalendarDays, label: "活動行事曆", path: "/activities", roles: ["Admin", "Leader", "Member"] },

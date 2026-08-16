@@ -20,7 +20,7 @@ export function filterPrayers<T extends PrayerFilterItem>(items: T[], filter: "c
   return items.filter(item => filter === "archived" ? item.isArchived : !item.isArchived && (filter === "current" ? item.status === "praying" : item.status === "answered"));
 }
 
-export type GroupSearchItem = { name: string; district: string; leaderName?: string | null };
+export type GroupSearchItem = { id: number; name: string; district: string; leaderName?: string | null };
 
 export function filterGroups<T extends GroupSearchItem>(items: T[], searchTerm: string) {
   const query = searchTerm.trim().toLocaleLowerCase("zh-TW");

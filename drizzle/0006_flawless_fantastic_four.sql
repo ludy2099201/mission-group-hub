@@ -1,0 +1,1 @@
+ALTER TABLE `groups` ADD `visibility` enum('public','restricted','confidential') DEFAULT 'restricted' NOT NULL;

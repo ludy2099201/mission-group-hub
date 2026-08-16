@@ -57,12 +57,21 @@ const missionaryInput = z.object({
   status: z.enum(["active", "inactive"]).default("active"),
 });
 
-const groupInput = z.object({
+const groupBaseInput = z.object({
   name: z.string().trim().min(1).max(120),
   district: z.string().trim().min(1).max(120),
   leaderUserId: z.number().int().positive().nullable().optional(),
   description: optionalText,
+});
+
+const groupInput = groupBaseInput.extend({
   status: z.enum(["active", "inactive"]).default("active"),
+  visibility: z.enum(["public", "restricted", "confidential"]).default("restricted"),
+});
+
+const groupUpdateInput = groupBaseInput.extend({
+  status: z.enum(["active", "inactive"]).optional(),
+  visibility: z.enum(["public", "restricted", "confidential"]).optional(),
 });
 
 export const appRouter = router({
@@ -194,6 +203,7 @@ export const appRouter = router({
   }),
   groups: router({
     list: protectedProcedure.query(async ({ ctx }) => {
+      if (ctx.user.role === "Member") return db.listPublicGroups();
       requireGroupLeader(ctx.user.role);
       const rows = await db.listGroups();
       return ctx.user.role === "Leader" ? rows.filter(row => row.leaderUserId === ctx.user.id) : rows;
@@ -204,12 +214,12 @@ export const appRouter = router({
       await writeAudit(ctx.user.id, "group.create", "group", id, `建立小組：${input.name}`);
       return id;
     }),
-    update: protectedProcedure.input(idInput.merge(groupInput)).mutation(async ({ ctx, input }) => {
+    update: protectedProcedure.input(idInput.merge(groupUpdateInput)).mutation(async ({ ctx, input }) => {
       await requireOwnedGroup(ctx.user, input.id);
-      if (ctx.user.role !== "Admin" && (input.leaderUserId !== undefined || input.status !== undefined)) throw new TRPCError({ code: "FORBIDDEN", message: "Leader 無法調整小組帶領人或狀態。" });
+      if (ctx.user.role !== "Admin" && (input.leaderUserId !== undefined || input.status !== undefined || input.visibility !== undefined)) throw new TRPCError({ code: "FORBIDDEN", message: "Leader 無法調整小組帶領人、狀態或保密等級。" });
       const { id, ...data } = input;
       await db.updateGroup(id, data);
-      await writeAudit(ctx.user.id, "group.update", "group", id, `更新小組：${data.name}`);
+      await writeAudit(ctx.user.id, "group.update", "group", id, data.visibility ? `更新小組：${data.name}，保密等級：${data.visibility}` : `更新小組：${data.name}`);
     }),
     members: protectedProcedure.input(z.object({ groupId: z.number().int().positive() })).query(async ({ ctx, input }) => {
       await requireOwnedGroup(ctx.user, input.groupId);
