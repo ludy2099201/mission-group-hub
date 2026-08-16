@@ -80,6 +80,11 @@ describe("多角色存取限制", () => {
     await expect(caller.rollout.readiness()).rejects.toMatchObject({ code: "FORBIDDEN" });
   });
 
+  it("拒絕非 Admin 讀取保密小組盤點", async () => {
+    const caller = appRouter.createCaller(createContext("Leader"));
+    await expect(caller.governance.groupSecurityReview()).rejects.toMatchObject({ code: "FORBIDDEN" });
+  });
+
   it("拒絕非 Admin 下載真實資料匯入模板", async () => {
     const caller = appRouter.createCaller(createContext("Member"));
     await expect(caller.governance.downloadImportTemplate({ template: "groups" })).rejects.toMatchObject({ code: "FORBIDDEN" });

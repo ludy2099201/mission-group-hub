@@ -40,6 +40,7 @@ const menuItems: { icon: typeof LayoutDashboard; label: string; path: string; ro
   { icon: Megaphone, label: "公告中心", path: "/announcements", roles: ["Admin", "Leader", "Member"] },
   { icon: ShieldCheck, label: "角色權限", path: "/permissions", roles: ["Admin"] },
   { icon: ShieldCheck, label: "資料治理", path: "/governance", roles: ["Admin"] },
+  { icon: ShieldCheck, label: "保密盤點", path: "/group-security", roles: ["Admin"] },
 ];
 
 const SIDEBAR_WIDTH_KEY = "mission-group-sidebar-width";

@@ -1,0 +1,20 @@
+import { useAuth } from "@/_core/hooks/useAuth";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { trpc } from "@/lib/trpc";
+import { AlertTriangle, CheckCircle2, CircleAlert, Eye, LockKeyhole, RefreshCw, ShieldCheck } from "lucide-react";
+
+const countCards = [
+  { key: "public", label: "公開小組", note: "Member 僅可查看基本資料", color: "text-[#557b5c] bg-[#eff6ed]" },
+  { key: "restricted", label: "受限小組", note: "僅 Admin 與帶領人", color: "text-[#88683e] bg-[#fff6e7]" },
+  { key: "confidential", label: "保密小組", note: "最小可見範圍", color: "text-[#884d4a] bg-[#fff0ed]" },
+] as const;
+
+export default function GroupSecurityReview() {
+  const { user } = useAuth(); const review = trpc.governance.groupSecurityReview.useQuery(undefined, { enabled: user?.role === "Admin" });
+  if (user?.role !== "Admin") return <Card className="border-[#e3dbcf] bg-[#fdfcf9]"><CardContent className="py-16 text-center"><ShieldCheck className="mx-auto h-9 w-9 text-[#b07b51]" /><h2 className="mt-4 font-serif text-2xl text-[#405a49]">保密小組盤點僅限 Admin</h2><p className="mt-2 text-sm text-[#78827b]">此區僅讀取保密等級、帶領人指派與小組狀態，不會顯示成員或關懷內容。</p></CardContent></Card>;
+  if (review.isError) return <Card className="border-[#ead4cf] bg-[#fffaf8]"><CardContent className="py-16 text-center"><CircleAlert className="mx-auto h-9 w-9 text-[#a4594e]" /><h2 className="mt-4 font-serif text-2xl text-[#7d4037]">保密盤點暫時無法載入</h2><Button onClick={() => review.refetch()} className="mt-6 rounded-xl bg-[#8b4f43] hover:bg-[#713d34]"><RefreshCw className="mr-2 h-4 w-4" />重新整理</Button></CardContent></Card>;
+  const data = review.data;
+  return <div className="space-y-6"><Card className="border-[#d9e6d6] bg-[#f8fbf7] shadow-none"><CardHeader><div className="flex items-start gap-3"><div className="grid h-10 w-10 place-items-center rounded-xl bg-[#e6f1e5] text-[#4f7759]"><LockKeyhole className="h-5 w-5" /></div><div><CardTitle className="font-serif text-2xl text-[#405a49]">保密小組盤點</CardTitle><CardDescription className="mt-1">唯讀檢查目前小組的保密等級、帶領人指派與公開面向；不讀取名冊、出席或關懷內容。</CardDescription></div></div></CardHeader></Card><section className="grid gap-4 sm:grid-cols-3">{countCards.map(card => <Card key={card.key} className="border-[#e6e0d7] bg-[#fdfcf9] shadow-none"><CardContent className="p-5"><div className={`grid h-9 w-9 place-items-center rounded-xl ${card.color}`}><Eye className="h-4 w-4" /></div><p className="mt-4 text-sm font-medium text-[#738077]">{card.label}</p><p className="mt-2 font-serif text-4xl font-semibold text-[#405a49]">{data?.counts[card.key] ?? 0}</p><p className="mt-2 text-xs text-[#919991]">{card.note}</p></CardContent></Card>)}</section><Card className="border-[#e6dfd5] bg-[#fdfcf9] shadow-none"><CardHeader><CardTitle className="font-serif text-xl text-[#405a49]">需留意的存取風險</CardTitle><CardDescription>系統依真實資料提示需由 Admin 覆核的事項；不會自動修改或停用小組。</CardDescription></CardHeader><CardContent>{data?.risks.length ? <div className="space-y-3">{data.risks.map((risk, index) => <div key={`${risk.type}-${risk.groupId}-${index}`} className="flex gap-3 rounded-xl border border-[#eadfd3] bg-[#fffaf4] p-4"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-[#aa753d]" /><div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-2"><p className="font-medium text-[#5a625b]">{risk.groupName}</p><Badge variant="outline" className="border-[#e6d0b3] bg-[#fff6e6] text-[#98652e]">{risk.type === "unassigned_sensitive" ? "需指派帶領人" : risk.type === "public_review" ? "公開面向覆核" : "停用資料覆核"}</Badge></div><p className="mt-1 text-sm leading-6 text-[#7a746b]">{risk.message}</p></div></div>)}</div> : <div className="flex gap-3 rounded-xl bg-[#eff6ed] p-5"><CheckCircle2 className="mt-0.5 h-5 w-5 text-[#5c8966]" /><div><p className="font-medium text-[#4f7257]">目前沒有需要處理的保密小組風險</p><p className="mt-1 text-sm leading-6 text-[#6c806f]">導入真實小組後，系統會自動顯示未指派帶領人、公開面向與已停用敏感小組的提醒。</p></div></div>}</CardContent></Card></div>;
+}

@@ -25,6 +25,7 @@ import {
 import { ENV } from "./_core/env";
 import { calculateAttendanceSummary } from "./attendanceMetrics";
 import { evaluateRolloutReadiness } from "../shared/rolloutReadiness";
+import { buildGroupSecurityReview } from "../shared/groupSecurityReview";
 
 let _db: ReturnType<typeof drizzle> | null = null;
 
@@ -233,6 +234,11 @@ export async function listPublicGroups() {
     visibility: groups.visibility,
     createdAt: groups.createdAt,
   }).from(groups).leftJoin(users, eq(groups.leaderUserId, users.id)).where(and(eq(groups.status, "active"), eq(groups.visibility, "public"))).orderBy(asc(groups.district), asc(groups.name));
+}
+
+export async function getGroupSecurityReview() {
+  const rows = await listGroups();
+  return buildGroupSecurityReview(rows.map(row => ({ id: row.id, name: row.name, status: row.status, visibility: row.visibility, leaderUserId: row.leaderUserId })));
 }
 
 export async function getGroupById(id: number) {

@@ -112,6 +112,10 @@ export const appRouter = router({
     }),
   }),
   governance: router({
+    groupSecurityReview: protectedProcedure.query(({ ctx }) => {
+      requireAdmin(ctx.user.role);
+      return db.getGroupSecurityReview();
+    }),
     auditLogs: protectedProcedure.input(z.object({ limit: z.number().int().min(1).max(200).default(50) })).query(({ ctx, input }) => {
       requireAdmin(ctx.user.role);
       return db.listAuditLogs(input.limit);
