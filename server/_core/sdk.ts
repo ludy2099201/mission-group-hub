@@ -311,6 +311,10 @@ class SDKServer {
       throw ForbiddenError("User not found");
     }
 
+    if (!user.isActive) {
+      throw ForbiddenError("Account is deactivated");
+    }
+
     await db.upsertUser({
       openId: user.openId,
       lastSignedIn: signedInAt,
@@ -339,6 +343,8 @@ function buildCronUser(
     email: null,
     loginMethod: null,
     role: "Member",
+    isActive: true,
+    deactivatedAt: null,
     createdAt: now,
     updatedAt: now,
     lastSignedIn: now,

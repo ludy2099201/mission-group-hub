@@ -30,6 +30,7 @@ const menuItems: { icon: typeof LayoutDashboard; label: string; path: string; ro
   { icon: CalendarDays, label: "活動行事曆", path: "/activities", roles: ["Admin", "Leader", "Member"] },
   { icon: Megaphone, label: "公告中心", path: "/announcements", roles: ["Admin", "Leader", "Member"] },
   { icon: ShieldCheck, label: "角色權限", path: "/permissions", roles: ["Admin"] },
+  { icon: ShieldCheck, label: "資料治理", path: "/governance", roles: ["Admin"] },
 ];
 
 const SIDEBAR_WIDTH_KEY = "mission-group-sidebar-width";

@@ -17,6 +17,10 @@ const requireUser = t.middleware(async opts => {
     throw new TRPCError({ code: "UNAUTHORIZED", message: UNAUTHED_ERR_MSG });
   }
 
+  if (!ctx.user.isActive) {
+    throw new TRPCError({ code: "FORBIDDEN", message: "此帳號已停用，請聯繫系統管理員。" });
+  }
+
   return next({
     ctx: {
       ...ctx,
@@ -31,7 +35,7 @@ export const adminProcedure = t.procedure.use(
   t.middleware(async opts => {
     const { ctx, next } = opts;
 
-    if (!ctx.user || ctx.user.role !== 'Admin') {
+    if (!ctx.user || !ctx.user.isActive || ctx.user.role !== 'Admin') {
       throw new TRPCError({ code: "FORBIDDEN", message: NOT_ADMIN_ERR_MSG });
     }
 

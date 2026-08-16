@@ -11,11 +11,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { trpc } from "@/lib/trpc";
 import { eventsByDayOfMonth } from "@shared/calendar";
 import { filterActivities, filterGroups, filterMissionaries, filterPrayers } from "@shared/filtering";
-import { CalendarDays, Check, ChevronLeft, ChevronRight, CircleDollarSign, ClipboardCheck, Edit3, HeartHandshake, Mail, MapPin, Megaphone, Phone, Plus, Search, Sparkles, Sprout, UsersRound } from "lucide-react";
+import { CalendarDays, Check, ChevronLeft, ChevronRight, CircleDollarSign, ClipboardCheck, Edit3, FileDown, HeartHandshake, History, Mail, MapPin, Megaphone, Phone, Plus, Search, ShieldCheck, Sparkles, Sprout, UserCheck, UserX, UsersRound } from "lucide-react";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
-export type ManagementView = "dashboard" | "missionaries" | "prayers" | "groups" | "activities" | "announcements" | "permissions";
+export type ManagementView = "dashboard" | "missionaries" | "prayers" | "groups" | "activities" | "announcements" | "permissions" | "governance";
 
 const viewCopy: Record<ManagementView, { eyebrow: string; title: string; description: string }> = {
   dashboard: { eyebrow: "TODAY AT A GLANCE", title: "平安，願您今天服事得力。", description: "從全局數據開始，留意每一個需要關懷、同行與代禱的訊號。" },
@@ -25,6 +25,7 @@ const viewCopy: Record<ManagementView, { eyebrow: string; title: string; descrip
   activities: { eyebrow: "CHURCH CALENDAR", title: "活動行事曆", description: "建立清楚的教會活動節奏，並將活動指派給合適的小組。" },
   announcements: { eyebrow: "COMMUNICATION", title: "公告中心", description: "在對的時間，向對的群體傳遞清楚、溫暖且一致的訊息。" },
   permissions: { eyebrow: "ACCESS GOVERNANCE", title: "角色權限", description: "以 Admin、Leader、Member 三層權限，守護敏感牧養與支持資料。" },
+  governance: { eyebrow: "DATA GOVERNANCE", title: "資料治理", description: "以受稽核的匯出、帳號生命週期與操作紀錄，守護教會資料的可用性與可追溯性。" },
 };
 
 const dateText = (value: Date | number | string | null | undefined) => value ? new Date(value).toLocaleDateString("zh-TW", { month: "long", day: "numeric", year: "numeric" }) : "—";
@@ -46,6 +47,7 @@ export default function ManagementPage({ view }: { view: ManagementView }) {
     {view === "activities" && <ActivityPanel />}
     {view === "announcements" && <AnnouncementPanel />}
     {view === "permissions" && <PermissionPanel />}
+    {view === "governance" && <GovernancePanel />}
   </div>;
 }
 
@@ -161,6 +163,19 @@ function ActivityDialog({ groups, onSubmit }: { groups: any[]; onSubmit: (input:
 function AnnouncementPanel() {
   const { user } = useAuth(); const isAdmin = user?.role === "Admin"; const announcements = trpc.activities.announcements.useQuery(); const groups = trpc.groups.list.useQuery(undefined, { enabled: isAdmin }); const create = trpc.activities.createAnnouncement.useMutation({ onSuccess: () => { announcements.refetch(); toast.success("公告已發布"); } });
   return <div><div className="mb-5 flex justify-end">{isAdmin && <Dialog><DialogTrigger asChild><Button className="rounded-xl bg-[#355f4d] hover:bg-[#294a3d]"><Plus className="mr-2 h-4 w-4" />發布公告</Button></DialogTrigger><DialogContent className="max-h-[92vh] overflow-y-auto rounded-2xl"><DialogHeader><DialogTitle>建立公告</DialogTitle></DialogHeader><form onSubmit={e => { e.preventDefault(); const f = new FormData(e.currentTarget); create.mutate({ title: String(f.get("title")), content: String(f.get("content")), isPublished: true, groupIds: f.getAll("groupIds").map(Number) }); }} className="space-y-3"><Field label="公告標題" name="title" required /><div><Label>公告內容</Label><Textarea name="content" required className="mt-2 min-h-36" /></div><GroupChecks groups={groups.data ?? []} /><DialogFooter><Button type="submit">發布公告</Button></DialogFooter></form></DialogContent></Dialog>}</div>{announcements.data?.length ? <div className="space-y-4">{announcements.data.map(item => <Card key={item.id} className="border-[#e8e2d8] bg-[#fdfcf9] shadow-none"><CardContent className="p-6"><div className="flex items-start justify-between gap-3"><div><p className="text-[10px] font-bold tracking-[0.16em] text-[#a06c3b]">CHURCH NOTICE</p><h2 className="mt-2 font-serif text-2xl font-semibold text-[#405a49]">{item.title}</h2></div><Badge variant="outline" className="border-[#d4e2d1] bg-[#eff5ed] text-[#50755a]">已發布</Badge></div><p className="mt-4 whitespace-pre-wrap text-sm leading-7 text-[#66736b]">{item.content}</p><p className="mt-5 text-xs text-[#a0a79f]">發布於 {datetimeText(item.publishedAt || item.createdAt)}</p></CardContent></Card>)}</div> : <EmptyState icon={Megaphone} title="尚無公告" detail="發布公告後，所有具檢視權限的會友都可在此閱讀。" />}</div>;
+}
+
+function GovernancePanel() {
+  const { user } = useAuth(); const isAdmin = user?.role === "Admin";
+  const users = trpc.users.list.useQuery(undefined, { enabled: isAdmin }); const auditLogs = trpc.governance.auditLogs.useQuery({ limit: 30 }, { enabled: isAdmin });
+  const exportCsv = trpc.governance.exportCsv.useMutation({ onSuccess: data => { const url = URL.createObjectURL(new Blob([data.csv], { type: "text/csv;charset=utf-8" })); const link = document.createElement("a"); link.href = url; link.download = data.filename; link.click(); URL.revokeObjectURL(url); auditLogs.refetch(); toast.success(`已準備 ${data.rowCount} 筆資料的匯出檔。`); }, onError: error => toast.error(error.message) });
+  const setStatus = trpc.users.setStatus.useMutation({ onSuccess: () => { users.refetch(); auditLogs.refetch(); toast.success("帳號狀態已更新"); }, onError: error => toast.error(error.message) });
+  if (!isAdmin) return <EmptyState icon={ShieldCheck} title="您沒有資料治理的存取權" detail="資料匯出、稽核紀錄與帳號生命週期僅限 Admin 使用。" />;
+  const resources = [{ key: "missionaries", label: "宣教士名冊" }, { key: "supportCommitments", label: "支持承諾" }, { key: "prayers", label: "代禱事項" }, { key: "groups", label: "小組資料" }, { key: "groupMembers", label: "小組成員" }, { key: "attendance", label: "出席紀錄" }, { key: "careLogs", label: "關懷日誌" }, { key: "events", label: "活動" }, { key: "announcements", label: "公告" }] as const;
+  const requestExport = (resource: typeof resources[number]["key"], label: string) => { if (window.confirm(`即將下載「${label}」CSV。檔案可能含有個人或敏感牧養資料，請確認儲存位置安全。`)) exportCsv.mutate({ resource }); };
+  return <div className="space-y-6"><Card className="border-[#e3dbcf] bg-[#fdfcf9] shadow-none"><CardHeader><div className="flex items-start gap-3"><div className="grid h-10 w-10 place-items-center rounded-xl bg-[#edf4eb] text-[#477258]"><FileDown className="h-5 w-5" /></div><div><CardTitle className="font-serif text-xl text-[#405a49]">受稽核資料匯出</CardTitle><CardDescription className="mt-1">每次匯出均會記錄在操作稽核中。請僅下載至受管理、受加密的儲存位置。</CardDescription></div></div></CardHeader><CardContent className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">{resources.map(resource => <Button key={resource.key} variant="outline" disabled={exportCsv.isPending} onClick={() => requestExport(resource.key, resource.label)} className="justify-start rounded-xl border-[#e3ddd3] text-[#4f6257]"><FileDown className="mr-2 h-4 w-4 text-[#a06c3b]" />匯出{resource.label}</Button>)}</CardContent></Card>
+    <div className="grid gap-6 xl:grid-cols-[1.05fr_0.95fr]"><Card className="border-[#e3dbcf] bg-[#fdfcf9] shadow-none"><CardHeader><div className="flex items-start gap-3"><div className="grid h-10 w-10 place-items-center rounded-xl bg-[#f8eee1] text-[#a06332]"><UserCheck className="h-5 w-5" /></div><div><CardTitle className="font-serif text-xl text-[#405a49]">帳號生命週期</CardTitle><CardDescription className="mt-1">停用帳號後將無法再存取受保護資料，歷史紀錄仍會保留。</CardDescription></div></div></CardHeader><CardContent>{users.data?.length ? <div className="divide-y divide-[#eee9e1]">{users.data.map(person => <div key={person.id} className="flex flex-col gap-3 py-3 first:pt-0 sm:flex-row sm:items-center sm:justify-between"><div><p className="font-medium text-[#52645a]">{person.name || "未命名使用者"}</p><p className="mt-0.5 text-xs text-[#99a099]">{person.email || "尚未提供電子郵件"} · {person.role}</p></div><Button size="sm" variant={person.isActive ? "outline" : "default"} disabled={setStatus.isPending || person.id === user?.id} onClick={() => { const next = !person.isActive; if (window.confirm(next ? `確定要啟用「${person.name || person.email || "此使用者"}」嗎？` : `確定要停用「${person.name || person.email || "此使用者"}」嗎？此帳號將立即無法使用系統。`)) setStatus.mutate({ userId: person.id, isActive: next }); }} className={person.isActive ? "rounded-lg border-[#e2d7cc] text-[#8c6250]" : "rounded-lg bg-[#355f4d] hover:bg-[#294a3d]"}>{person.isActive ? <><UserX className="mr-1.5 h-3.5 w-3.5" />停用</> : <><UserCheck className="mr-1.5 h-3.5 w-3.5" />啟用</>}</Button></div>)}</div> : <EmptyState icon={UserCheck} title="尚無可管理使用者" detail="使用者首次登入後會顯示於此處。" />}</CardContent></Card>
+      <Card className="border-[#e3dbcf] bg-[#fdfcf9] shadow-none"><CardHeader><div className="flex items-start gap-3"><div className="grid h-10 w-10 place-items-center rounded-xl bg-[#edf2f5] text-[#4f7587]"><History className="h-5 w-5" /></div><div><CardTitle className="font-serif text-xl text-[#405a49]">最近操作稽核</CardTitle><CardDescription className="mt-1">僅呈現變更摘要，不收錄關懷與代禱的完整內容。</CardDescription></div></div></CardHeader><CardContent>{auditLogs.data?.length ? <div className="max-h-105 divide-y divide-[#eee9e1] overflow-y-auto">{auditLogs.data.map(log => <div key={log.id} className="py-3 first:pt-0"><div className="flex items-start justify-between gap-3"><div><p className="font-medium text-[#52645a]">{log.summary}</p><p className="mt-1 text-xs text-[#9a938a]">{log.actorName || log.actorEmail || "系統使用者"} · {dateText(log.createdAt)}</p></div><Badge variant="outline" className="shrink-0 border-[#d4e2d1] bg-[#eff5ed] text-[#50755a]">{log.action}</Badge></div></div>)}</div> : <EmptyState icon={History} title="尚無稽核紀錄" detail="資料異動、角色調整、帳號啟停與匯出後，將在此處留下摘要。" />}</CardContent></Card></div></div>;
 }
 
 function PermissionPanel() {

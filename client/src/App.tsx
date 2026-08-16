@@ -20,6 +20,7 @@ function App() {
     <Route path="/activities"><Screen view="activities" /></Route>
     <Route path="/announcements"><Screen view="announcements" /></Route>
     <Route path="/permissions"><Screen view="permissions" /></Route>
+    <Route path="/governance"><Screen view="governance" /></Route>
     <Route><NotFound /></Route>
   </Switch></TooltipProvider></ThemeProvider></ErrorBoundary>;
 }

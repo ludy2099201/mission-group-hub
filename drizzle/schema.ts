@@ -27,10 +27,25 @@ export const users = mysqlTable("users", {
   email: varchar("email", { length: 320 }),
   loginMethod: varchar("loginMethod", { length: 64 }),
   role: mysqlEnum("role", userRoles).default("Member").notNull(),
+  isActive: boolean("isActive").default(true).notNull(),
+  deactivatedAt: timestamp("deactivatedAt"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
   lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),
 });
+
+export const auditLogs = mysqlTable("auditLogs", {
+  id: int("id").autoincrement().primaryKey(),
+  actorUserId: int("actorUserId").notNull().references(() => users.id),
+  action: varchar("action", { length: 120 }).notNull(),
+  entityType: varchar("entityType", { length: 80 }).notNull(),
+  entityId: varchar("entityId", { length: 80 }),
+  summary: varchar("summary", { length: 500 }).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (table) => [
+  index("auditLogs_createdAt_idx").on(table.createdAt),
+  index("auditLogs_actor_idx").on(table.actorUserId),
+]);
 
 export const missionaries = mysqlTable("missionaries", {
   id: int("id").autoincrement().primaryKey(),

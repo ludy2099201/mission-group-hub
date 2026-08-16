@@ -15,6 +15,13 @@
       "when": 1786786330614,
       "tag": "0001_lean_blockbuster",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1786806036770,
+      "tag": "0002_condemned_caretaker",
+      "breakpoints": true
     }
   ]
 }
