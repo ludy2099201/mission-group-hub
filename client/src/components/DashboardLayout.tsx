@@ -34,6 +34,7 @@ const menuItems: { icon: typeof LayoutDashboard; label: string; path: string; ro
   { icon: ContactRound, label: "人員主檔", path: "/people", roles: ["Admin"] },
   { icon: CalendarDays, label: "活動行事曆", path: "/activities", roles: ["Admin", "Leader", "Member"] },
   { icon: CalendarCheck2, label: "活動報名", path: "/event-registration", roles: ["Admin"] },
+  { icon: ClipboardList, label: "上線驗收", path: "/rollout-readiness", roles: ["Admin"] },
   { icon: Megaphone, label: "公告中心", path: "/announcements", roles: ["Admin", "Leader", "Member"] },
   { icon: ShieldCheck, label: "角色權限", path: "/permissions", roles: ["Admin"] },
   { icon: ShieldCheck, label: "資料治理", path: "/governance", roles: ["Admin"] },

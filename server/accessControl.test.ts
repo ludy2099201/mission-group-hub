@@ -67,4 +67,9 @@ describe("多角色存取限制", () => {
     await expect(caller.activities.registrations({ eventId: 1 })).rejects.toMatchObject({ code: "FORBIDDEN" });
     await expect(caller.activities.register({ eventId: 1, personId: 1 })).rejects.toMatchObject({ code: "FORBIDDEN" });
   });
+
+  it("拒絕非 Admin 讀取上線前驗收準備狀態", async () => {
+    const caller = appRouter.createCaller(createContext("Leader"));
+    await expect(caller.rollout.readiness()).rejects.toMatchObject({ code: "FORBIDDEN" });
+  });
 });

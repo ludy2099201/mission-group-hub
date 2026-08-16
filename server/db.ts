@@ -24,6 +24,7 @@ import {
 } from "../drizzle/schema";
 import { ENV } from "./_core/env";
 import { calculateAttendanceSummary } from "./attendanceMetrics";
+import { evaluateRolloutReadiness } from "../shared/rolloutReadiness";
 
 let _db: ReturnType<typeof drizzle> | null = null;
 
@@ -422,6 +423,23 @@ export async function listRecentAbsenceRecords(leaderUserId?: number) {
   const query = db.select({ memberId: groupMembers.id, memberName: groupMembers.name, groupId: groups.id, groupName: groups.name, heldAt: groupMeetings.heldAt })
     .from(attendanceRecords).innerJoin(groupMeetings, eq(attendanceRecords.meetingId, groupMeetings.id)).innerJoin(groups, eq(groupMeetings.groupId, groups.id)).innerJoin(groupMembers, eq(attendanceRecords.groupMemberId, groupMembers.id));
   return leaderUserId === undefined ? query.where(and(eq(attendanceRecords.status, "absent"), gte(groupMeetings.heldAt, cutoff))) : query.where(and(eq(attendanceRecords.status, "absent"), gte(groupMeetings.heldAt, cutoff), eq(groups.leaderUserId, leaderUserId)));
+}
+
+export async function getRolloutReadiness() {
+  const db = await requireDb();
+  const now = new Date(); const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()); const endOfToday = new Date(startOfToday); endOfToday.setDate(endOfToday.getDate() + 1); const endOfUpcoming = new Date(endOfToday); endOfUpcoming.setDate(endOfUpcoming.getDate() + 7); const absenceCutoff = new Date(now); absenceCutoff.setDate(absenceCutoff.getDate() - 30);
+  const [leaders, groupRows, memberRows, meetingRows, careRows, absenceRows, taskRows] = await Promise.all([
+    db.select({ id: users.id }).from(users).where(and(eq(users.role, "Leader"), eq(users.isActive, true))),
+    db.select({ id: groups.id }).from(groups).where(eq(groups.status, "active")),
+    db.select({ id: groupMembers.id }).from(groupMembers),
+    db.select({ id: groupMeetings.id }).from(groupMeetings),
+    db.select({ id: careLogs.id }).from(careLogs).where(eq(careLogs.followUpStatus, "pending")),
+    db.select({ id: attendanceRecords.id }).from(attendanceRecords).innerJoin(groupMeetings, eq(attendanceRecords.meetingId, groupMeetings.id)).where(and(eq(attendanceRecords.status, "absent"), gte(groupMeetings.heldAt, absenceCutoff))),
+    db.select({ dueAt: pastoralTasks.dueAt }).from(pastoralTasks).where(eq(pastoralTasks.status, "open")),
+  ]);
+  const overdueTasks = taskRows.filter(task => task.dueAt && task.dueAt < startOfToday).length; const todayTasks = taskRows.filter(task => task.dueAt && task.dueAt >= startOfToday && task.dueAt < endOfToday).length; const upcomingTasks = taskRows.filter(task => task.dueAt && task.dueAt >= endOfToday && task.dueAt < endOfUpcoming).length;
+  const input = { activeLeaders: leaders.length, groups: groupRows.length, groupMembers: memberRows.length, meetings: meetingRows.length, pendingCareLogs: careRows.length, recentAbsences: absenceRows.length, overdueTasks, todayTasks, upcomingTasks };
+  return { input, checks: evaluateRolloutReadiness(input) };
 }
 
 export async function listEvents(publishedOnly = false) {

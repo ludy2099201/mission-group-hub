@@ -9,6 +9,7 @@ import NotFound from "./pages/NotFound";
 import PastoralWorkCenter from "./pages/PastoralWorkCenter";
 import PeopleDirectory from "./pages/PeopleDirectory";
 import EventRegistrationCenter from "./pages/EventRegistrationCenter";
+import RolloutReadiness from "./pages/RolloutReadiness";
 
 function Screen({ view }: { view: ManagementView }) {
   return <DashboardLayout><ManagementPage view={view} /></DashboardLayout>;
@@ -26,6 +27,10 @@ function EventRegistrationScreen() {
   return <DashboardLayout><EventRegistrationCenter /></DashboardLayout>;
 }
 
+function RolloutReadinessScreen() {
+  return <DashboardLayout><RolloutReadiness /></DashboardLayout>;
+}
+
 function App() {
   return <ErrorBoundary><ThemeProvider defaultTheme="light"><TooltipProvider><Toaster richColors /><Switch>
     <Route path="/"><Screen view="dashboard" /></Route>
@@ -39,6 +44,7 @@ function App() {
     <Route path="/pastoral-work"><PastoralScreen /></Route>
     <Route path="/people"><PeopleScreen /></Route>
     <Route path="/event-registration"><EventRegistrationScreen /></Route>
+    <Route path="/rollout-readiness"><RolloutReadinessScreen /></Route>
     <Route><NotFound /></Route>
   </Switch></TooltipProvider></ThemeProvider></ErrorBoundary>;
 }

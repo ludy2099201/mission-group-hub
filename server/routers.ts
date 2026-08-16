@@ -383,6 +383,9 @@ export const appRouter = router({
       return id;
     }),
   }),
+  rollout: router({
+    readiness: protectedProcedure.query(({ ctx }) => { requireAdmin(ctx.user.role); return db.getRolloutReadiness(); }),
+  }),
 });
 
 export type AppRouter = typeof appRouter;
