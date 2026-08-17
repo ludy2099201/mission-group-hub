@@ -1,44 +1,51 @@
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Route, Switch } from "wouter";
+import { lazy, Suspense } from "react";
 import DashboardLayout from "./components/DashboardLayout";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
-import ManagementPage, { type ManagementView } from "./pages/ManagementPage";
+import type { ManagementView } from "./pages/ManagementPage";
 import NotFound from "./pages/NotFound";
-import PastoralWorkCenter from "./pages/PastoralWorkCenter";
-import PeopleDirectory from "./pages/PeopleDirectory";
-import EventRegistrationCenter from "./pages/EventRegistrationCenter";
-import RolloutReadiness from "./pages/RolloutReadiness";
-import DataImportTemplates from "./pages/DataImportTemplates";
-import GroupSecurityReview from "./pages/GroupSecurityReview";
+
+const ManagementPage = lazy(() => import("./pages/ManagementPage"));
+const PastoralWorkCenter = lazy(() => import("./pages/PastoralWorkCenter"));
+const PeopleDirectory = lazy(() => import("./pages/PeopleDirectory"));
+const EventRegistrationCenter = lazy(() => import("./pages/EventRegistrationCenter"));
+const RolloutReadiness = lazy(() => import("./pages/RolloutReadiness"));
+const DataImportTemplates = lazy(() => import("./pages/DataImportTemplates"));
+const GroupSecurityReview = lazy(() => import("./pages/GroupSecurityReview"));
+
+function RouteLoader() {
+  return <div className="grid min-h-[55vh] place-items-center text-sm text-[#718077]">正在載入管理工作區…</div>;
+}
 
 function Screen({ view }: { view: ManagementView }) {
-  return <DashboardLayout><ManagementPage view={view} /></DashboardLayout>;
+  return <DashboardLayout><Suspense fallback={<RouteLoader />}><ManagementPage view={view} /></Suspense></DashboardLayout>;
 }
 
 function PastoralScreen() {
-  return <DashboardLayout><PastoralWorkCenter /></DashboardLayout>;
+  return <DashboardLayout><Suspense fallback={<RouteLoader />}><PastoralWorkCenter /></Suspense></DashboardLayout>;
 }
 
 function PeopleScreen() {
-  return <DashboardLayout><PeopleDirectory /></DashboardLayout>;
+  return <DashboardLayout><Suspense fallback={<RouteLoader />}><PeopleDirectory /></Suspense></DashboardLayout>;
 }
 
 function EventRegistrationScreen() {
-  return <DashboardLayout><EventRegistrationCenter /></DashboardLayout>;
+  return <DashboardLayout><Suspense fallback={<RouteLoader />}><EventRegistrationCenter /></Suspense></DashboardLayout>;
 }
 
 function RolloutReadinessScreen() {
-  return <DashboardLayout><RolloutReadiness /></DashboardLayout>;
+  return <DashboardLayout><Suspense fallback={<RouteLoader />}><RolloutReadiness /></Suspense></DashboardLayout>;
 }
 
 function DataImportTemplatesScreen() {
-  return <DashboardLayout><DataImportTemplates /></DashboardLayout>;
+  return <DashboardLayout><Suspense fallback={<RouteLoader />}><DataImportTemplates /></Suspense></DashboardLayout>;
 }
 
 function GroupSecurityReviewScreen() {
-  return <DashboardLayout><GroupSecurityReview /></DashboardLayout>;
+  return <DashboardLayout><Suspense fallback={<RouteLoader />}><GroupSecurityReview /></Suspense></DashboardLayout>;
 }
 
 function App() {

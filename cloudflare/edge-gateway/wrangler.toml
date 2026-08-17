@@ -1,0 +1,7 @@
+name = "mission-group-hub-edge"
+main = "src/index.ts"
+compatibility_date = "2026-08-17"
+workers_dev = true
+
+# 在 Cloudflare Dashboard 設定 route 或 custom domain；勿將 production origin 寫入此檔。
+# 部署後，以 `wrangler secret put APP_ORIGIN` 設定既有受管理 app 的 HTTPS origin。

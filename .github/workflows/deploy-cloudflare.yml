@@ -1,0 +1,28 @@
+name: Deploy Cloudflare Edge Gateway
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "cloudflare/edge-gateway/**"
+      - ".github/workflows/deploy-cloudflare.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    # 只有在 GitHub repository variable 明確設為 true 後才部署，避免尚未設定 Secrets 時失敗。
+    if: vars.CLOUDFLARE_DEPLOY_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: cloudflare/edge-gateway
+          command: deploy
