@@ -99,8 +99,8 @@
 - [x] 設定前端 vendor chunk 分割，降低初始 JavaScript 的單一檔案大小並重新驗證建置。
 - [ ] 連結 Cloudflare 帳號、設定受限 API Token／APP_ORIGIN secret 與自訂網域，完成實際 Edge Gateway 掛載。
 - [x] 盤點公開 GitHub 儲存庫的 README、CI、Issue／PR 範本、版本控制與依賴維護缺口。
-- [ ] 建立開源社群健康檔案與 GitHub Issue／Pull Request 範本。
-- [ ] 強化 CI 工作流程的取消舊執行、權限最小化與快取可靠性。
-- [ ] 更新公開 README 的 GitHub CI、架構與維護入口資訊。
-- [ ] 驗證 GitHub Actions、提交並推送 GitHub 專案優化。
+- [x] 建立開源社群健康檔案與 GitHub Issue／Pull Request 範本。
+- [x] 強化 CI 工作流程的取消舊執行、權限最小化與快取可靠性。
+- [x] 更新公開 README 的 GitHub CI、架構與維護入口資訊。
+- [x] 驗證 GitHub Actions、提交並推送 GitHub 專案優化。
 - [x] 保存 P1 牧養待辦與站內提醒中心版本。
