@@ -94,7 +94,7 @@
 - [x] 建立 Cloudflare 相容的 Edge Gateway 設定、路由分流與 GitHub Actions 部署工作流程。
 - [x] 加入靜態資產快取、安全回應標頭與動態資料不快取策略。
 - [x] 撰寫 Cloudflare 網域、DNS、SSL、WAF、GitHub Secrets 與回滾操作文件。
-- [ ] 驗證 Cloudflare 設定檔與 CI 工作流程，並更新公開 GitHub 儲存庫。
+- [x] 驗證 Cloudflare 設定檔與 CI 工作流程，並更新公開 GitHub 儲存庫。
 - [x] 將大型管理工作區改為路由層級動態載入，降低初始 JavaScript bundle 並重新驗證建置。
 - [x] 設定前端 vendor chunk 分割，降低初始 JavaScript 的單一檔案大小並重新驗證建置。
 - [ ] 連結 Cloudflare 帳號、設定受限 API Token／APP_ORIGIN secret 與自訂網域，完成實際 Edge Gateway 掛載。
