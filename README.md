@@ -58,7 +58,7 @@ pnpm dev
 
 ## 貢獻與安全
 
-歡迎提出 Issue 或 Pull Request。提交前請閱讀 [CONTRIBUTING.md](CONTRIBUTING.md) 與 [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)；GitHub 提供問題回報、功能建議與 Pull Request 範本，提交前 CI 會執行型別檢查、測試與建置。若發現資安或隱私風險，請依 [SECURITY.md](SECURITY.md) 的方式私下回報，請勿在公開 Issue 貼出敏感細節。
+歡迎提出 Issue 或 Pull Request。提交前請閱讀 [CONTRIBUTING.md](CONTRIBUTING.md)、[FAQ.md](FAQ.md) 與 [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)；GitHub 提供問題回報、功能建議與 Pull Request 範本，提交前 CI 會執行型別檢查、測試與建置。若發現資安或隱私風險，請依 [SECURITY.md](SECURITY.md) 的方式私下回報，請勿在公開 Issue 貼出敏感細節。
 
 ## Cloudflare 邊緣部署準備
 

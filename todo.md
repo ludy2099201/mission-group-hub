@@ -103,4 +103,8 @@
 - [x] 強化 CI 工作流程的取消舊執行、權限最小化與快取可靠性。
 - [x] 更新公開 README 的 GitHub CI、架構與維護入口資訊。
 - [x] 驗證 GitHub Actions、提交並推送 GitHub 專案優化。
+- [x] 盤點既有 README、CONTRIBUTING、SECURITY 與 Cloudflare 文件，整理貢獻者最常需要的實作與排錯資訊。
+- [x] 撰寫詳細繁體中文 CONTRIBUTING.md，涵蓋環境、分支、資料庫、測試、程式規範、PR 與安全資料處理。
+- [x] 建立 FAQ.md，回答安裝、登入、資料庫、測試、資料匯入、權限、Cloudflare 與 GitHub CI 的常見問題。
+- [ ] 在 README 與相關文件建立 FAQ／貢獻入口，驗證連結並推送 GitHub main 分支。
 - [x] 保存 P1 牧養待辦與站內提醒中心版本。
