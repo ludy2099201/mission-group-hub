@@ -1,0 +1,42 @@
+name: 問題回報
+description: 回報可重現的錯誤或非預期行為。
+title: "[Bug]: "
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: "請勿貼出真實會友、關懷、奉獻、登入憑證或其他敏感資料。"
+  - type: textarea
+    id: summary
+    attributes:
+      label: 問題摘要
+      description: 請簡要說明實際發生的行為。
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: 重現步驟
+      placeholder: |
+        1. 前往…
+        2. 點選…
+        3. 觀察…
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: 預期結果
+    validations:
+      required: true
+  - type: dropdown
+    id: environment
+    attributes:
+      label: 環境
+      options:
+        - 開發環境
+        - 預覽環境
+        - 已發布環境
+        - 不確定
+    validations:
+      required: true

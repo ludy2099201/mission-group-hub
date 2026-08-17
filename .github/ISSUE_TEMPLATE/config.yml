@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 安全與隱私問題
+    url: https://github.com/ludy2099201/mission-group-hub/blob/main/SECURITY.md
+    about: 請不要以公開 Issue 回報敏感資訊或尚未修補的弱點。
